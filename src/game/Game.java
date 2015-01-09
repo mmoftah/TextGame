@@ -1,18 +1,13 @@
 package game;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
@@ -21,51 +16,36 @@ import java.util.Scanner;
 
 @SuppressWarnings("unused")
 public class Game {
-	private static int MAPX = 52, MAPY = 52;
+	private static final int MAPX = 52, MAPY = 52;
 	private Player player1;
 	private String saveName;
 	private String[][] map;
 	private String[][] displayedMap;
-	private static boolean autosave;
-	private static Scanner butler = new Scanner(System.in);
 	private static String[] commands = { 
 		"(h)elp: brings up this menu",
 		"(i)nventory: shows you all the items you have",
 		"(s)ave: saves the game", 
 		"(m)ap: shows you the map",
 		"(c)haracter: gives you basic info on the character",
-		"move up (w): moves you up on the map",
-		"move down (s): moves you down on the map",
-		"move left (a): moves you left on the map",
-		"move right (d): moves you right on the map",
-		"info ****: get info on anything in the game (?)",
-		"(e)xit: exit the current game",
-		"(q)uit: quit the program"
+		"move (r)ight: moves you right on the map",
+		"move (l)eft: moves you left on the map",
+		"move (u)p: moves you up on the map",
+		"move (d)own: moves you down on the map" 
 	};
 	private static String[] mapKey = {
 		"'#': border",
 		"'-': empty space"
 	};
 	
-	public Game(Player player, boolean loaded) {
+	public Game(Player player) {
 		player1 = player;
-		if (!loaded) {
-			System.out.print("Would you like to enable autosave? ");
-			while (!(butler.hasNext("[ynYN]"))) {
-				System.out.print("Please eneter a 'y' or an 'n': ");
-				butler.nextLine();
-			}
-			if (butler.nextLine().equalsIgnoreCase("y"))
-				autosave = true;
-			else
-				autosave = false;
-		}
+		
 		createMap();
 	}
 	
 	public void saveGame() {
 		saveName = System.getProperty("user.dir");
-		saveName = saveName.concat("\\saved games\\" + player1.getName() + ".sav");
+		saveName = saveName.concat("\\saved games\\SavedGame.sav");
 		try { // Catch errors in I/O if necessary.
 				// Open a file to write to, named "SaveGame.sav".
 			FileOutputStream saveFile = new FileOutputStream(saveName);
@@ -76,74 +56,56 @@ public class Game {
 			// Now we do the save.
 			save.writeObject(player1.getName());
 			save.writeObject(player1.getCharacterClass());
+			save.writeObject(player1.getPotions());
 			save.writeObject(player1.getFood());
 			save.writeObject(player1.getWater());
-			save.writeObject(player1.getInventory());
+			save.writeObject(player1.getWeapons());
+			save.writeObject(player1.getPeople());
+			save.writeObject(player1.getPotions());
 			save.writeObject(player1.getX());
 			save.writeObject(player1.getY());
-			save.writeObject(autosave);
 			save.writeObject(map);
 			save.writeObject(displayedMap);
-			
 			// Close the file.
 			save.close(); // This also closes saveFile.
 			System.out.println("(Game Saved!)");
 		} catch (IOException exc) {
 			exc.printStackTrace(); // If there was an error, print the info.
 		}
-	} 
+	}
 	
-	public int loadGame() {
-		String dir = System.getProperty("user.dir") // current directory
-				+ "\\saved games";					// directory of saved games
-		String fileName; // name of save file
-		File[] fileList = new File(dir).listFiles(); 	// list of files in saved games directory
-		List<String> files = new ArrayList<String>();	// list of names of files
-		for (File f : fileList) 					// for every file in the file list
-			if (f.isFile()) 						// check if the file is a file (not directory)
-				if(f.getName().endsWith(".sav")) {	// check if the file is a ".sav"
-					String fName = f.getName().substring(0, f.getName().length() - 4);
-					files.add(fName); 				// add the name of the file to the ArrayList
-				}
+	public void loadGame() {
+		Scanner butler = new Scanner(System.in);
+		String dir = System.getProperty("user.dir");
+		String fileName;
+		dir = dir.concat("\\saved games");
+		File[] fileList = new File(dir).listFiles();
+		List<String> files = new ArrayList<String>();
+		for (File f : fileList)
+			if (f.isFile())
+				files.add(f.getName());
 		
-		if (fileList.length == 0) {	// if there are no ".sav" files in the saved games directory
-			System.out.println("Sorry, I could not find any saved games :("
-					+ "\nMake sure your saved games are in: "
-					+ "\n" + dir);
-			return -1;
+		if (fileList.length == 0) {
+			System.out.println("Sorry, I could not find any saved games :(");
+			return;
 		}
 		
-		// Print out all the saved game file names
 		System.out.println("Saved Games:");
 		for(String f : files)
 			System.out.println(f);
 		
-		boolean validFileName = false, goBack = false;
+		boolean validFileName = false;
 		do {
 			System.out.print("Which game would you like to load? ");
 			fileName = butler.nextLine();
 			for(String f : files)
 				if(fileName.equalsIgnoreCase(f))
 					validFileName = true;
-			if(fileName.equalsIgnoreCase("exit")
-				|| fileName.equalsIgnoreCase("back")) {
-				validFileName = true;
-				goBack = true;
-			}
-			if(!validFileName) {
+			if(!validFileName)
 				System.err.println("File not found!");
-				System.out.print("Would you like to load another game? (y/n) ");
-				while (!(butler.hasNext("[ynYN]"))) {
-					System.out.print("Please eneter a 'y' or an 'n': ");
-					butler.nextLine();
-				}
-				if (butler.nextLine().equalsIgnoreCase("n"))
-					return -1;
-			}
 		} while(!validFileName);
 		
-		saveName = dir.concat("\\" + fileName + ".sav");
-		System.out.println("Loading '" + saveName + "'");
+		saveName = dir.concat("\\" + fileName);
 		
 		try {
 			// Open file to read from, named SaveGame.sav.
@@ -151,19 +113,21 @@ public class Game {
 
 			// Create an ObjectInputStream to get objects from save file.
 			ObjectInputStream save = new ObjectInputStream(saveFile);
-			
+
 			// Now we do the restore.
 			// readObject() returns a generic Object, we cast those back
 			// into their original class type.
 			// For primitive types, use the corresponding reference class.
 			player1.updateCharacterName((String) save.readObject());
 			player1.updateCharacterClass((String) save.readObject());
+			player1.updatePotions((Integer) save.readObject());
 			player1.updateFood((Integer) save.readObject());
 			player1.updateWater((Integer) save.readObject());
-			player1.updateInventory((Inventory) save.readObject());
+			player1.updateWeapons((Integer) save.readObject());
+			player1.updatePeople((Integer) save.readObject());
+			player1.updateVehicles((Integer) save.readObject());
 			player1.updateX((Integer) save.readObject());
 			player1.updateY((Integer) save.readObject());
-			autosave = (boolean) save.readObject();
 			map = (String[][]) save.readObject();
 			displayedMap = (String[][]) save.readObject();
 
@@ -172,60 +136,14 @@ public class Game {
 			System.out.println("Game Loaded!");
 		} catch (IOException | ClassNotFoundException exc) {
 			exc.printStackTrace(); // If there was an error, print the info.
-			try { writeErrors(player1.getName(), exc); }
-			catch(IOException e) { e.printStackTrace(); }
-			return -2;
 		}
-		catch (ClassCastException exc) {
-			System.err.println("Game could not be loaded.");
-			return -3;
-		}
-		
-		return 0;
 	}
 	
-	public boolean isAutosave() { return autosave; }
-	
-	public void toggleAutosave() { autosave = !autosave; }
-	
-	public void showHelp() {
-		for(int i = 0; i < commands.length; i ++) {
-			if(i == 10)
-				System.out.println("autosave: toggle autosave " + 
-						(autosave ? "(currently enabled)" : "(currently disabled)"));
+	public static void showHelp() {
+		for(int i = 0; i < commands.length; i ++)
 			System.out.println(commands[i]);
-		}
 	}
 	
-	public static void writeErrors(String playerName, Exception e) throws IOException {
-		Date today = new Date();
-		SimpleDateFormat simpleDate = new SimpleDateFormat("dd-MM-yyyy");
-		String fileName = System.getProperty("user.dir") + "\\logs\\"
-				+ playerName + "-" + simpleDate.format(today) + ".txt";
-		
-		// TODO check if the file already exists
-		File errorFile = new File(fileName);
-		int i = 1;
-		while(errorFile.exists()) {
-			fileName = fileName + i;
-			errorFile = new File(fileName);
-			i ++;
-		}
-		
-		System.out.println(fileName);
-		errorFile.createNewFile();
-		
-		BufferedWriter errorStream = new BufferedWriter(new FileWriter(errorFile));
-		errorStream.write(today.toString());
-		errorStream.newLine();
-		errorStream.write(e.toString());
-		errorStream.close();
-	}
-	
-	/*
-	 * Creates the map with all the features and
-	 * the map that the player sees.
-	 */
 	public void createMap() {
 		//Creates feature map
 		map = new String[MAPY][MAPX];
@@ -248,6 +166,7 @@ public class Game {
 		
 		//Creates displayed map
 		displayedMap = new String[MAPY][MAPX];
+		
 		for(int y = 0; y < MAPY; y ++)
 			for(int x = 0; x < MAPX; x ++)
 				displayedMap[y][x] = "?";
@@ -273,7 +192,9 @@ public class Game {
 		BufferedReader br = new BufferedReader(new InputStreamReader(in));
 
 		String strLine;
+		int arraySize = 65;
 		String array[][] = new String[arraySize][];
+		int index = 0;
 		try {
 			while ((strLine = br.readLine()) != null) {
 				if (index > arraySize - 1) {
@@ -301,96 +222,14 @@ public class Game {
 		}
 	}*/
 	
-	// Load a custom map from a txt file
-	public void loadMap() throws IOException {
-		String mapFileName;
-		
-		Scanner yScan = new Scanner(new File("Map.txt"));
-		Scanner xScan;
-
-		// Check to see if the map is valid (all rows have same number of
-		// spaces)
-		int yCount = 0, xCount = 0, tempXCount = 0;
-		boolean validMapFile = true;
-		while (yScan.hasNextLine()) { // checks if there is another row
-			yCount++;
-			xScan = new Scanner(yScan.nextLine()); // sets xScan to scan the current row
-			xScan.useDelimiter(""); //xScan will scan each character individually
-			tempXCount = 0; 
-			while (xScan.hasNext()) {
-				tempXCount++;
-				xScan.next();
-			}
-			if (xCount == 0)
-				xCount = tempXCount;
-			else if (xCount != tempXCount) {
-				validMapFile = false;
-				break;
-			}
-		}
-		
-		if (!validMapFile) // if its not a valid map
-			System.err.println("This is not a valid map file.");
-		else { // if it is a valid map 
-			System.out.println("xCount: " + xCount + "\nyCount: " + yCount);
-			
-			MAPX = xCount;
-			MAPY = yCount;
-			
-			yScan = new Scanner(new File("Map.txt")); // Reset yScan
-			String[] mapRow; // holds the array of characters in the current row
-			map = new String[MAPY][MAPX];
-			yCount = 0;
-			while (yScan.hasNextLine()) {
-				xCount = 0;
-				xScan = new Scanner(yScan.nextLine()); // sets xScan to scan the current row
-				xScan.useDelimiter(""); //xScan will scan each character individually
-				mapRow = new String[MAPX];
-				while (xScan.hasNext()) {
-					mapRow[xCount] = xScan.next();
-					xCount ++;
-				}
-				map[yCount] = new String[MAPY];
-				map[yCount] = mapRow;
-				yCount ++;
-			}
-		}
-		
-		yScan.close();
-	}
-
-	// Returns the character at the space the player is going to ove to
-	public String checkNextMove(String direction) {
-		switch (direction) {
-		case "up":
-			return map[player1.getY() - 1][player1.getX()];
-
-		case "down":
-			return map[player1.getY() + 1][player1.getX()];
-
-		case "left":
-			return map[player1.getY()][player1.getX() - 1];
-
-		case "right":
-			return map[player1.getY()][player1.getX() + 1];
-
-		default:
-			return "#";
-		}
-	}
-	
-	// Checks to see if x is a valid space to move to
 	public boolean isValidX(int x) {
-		//System.out.println(map[player1.getY()][x]);
-		if(map[player1.getY()][x].equals("#") || map[player1.getY()][x].equals("L")) 
+		if(map[player1.getY()][x] == "#" || map[player1.getY()][x] == "L")
 			return false;
 		return true;
 	}
 	
-	// Checks to see if y is a valid space to move to
 	public boolean isValidY(int y) {
-		//System.out.println(map[y][player1.getX()]);
-		if(map[y][player1.getX()].equals("#") || map[y][player1.getX()].equals("L"))
+		if(map[y][player1.getX()] == "#" || map[y][player1.getX()] == "L")
 			return false;
 		return true;
 	}
@@ -418,7 +257,6 @@ public class Game {
 		System.out.println();
 	}
 	
-	// Reveals the area around the player
 	public void revealArea() {
 		int x = player1.getX(), y = player1.getY();
 		
@@ -430,26 +268,5 @@ public class Game {
 				} catch(IndexOutOfBoundsException e) { }
 			}
 		}
-	}
-
-	public void showFullMap() {
-		for(int y = 0; y < MAPY; y ++) {
-			System.out.println();
-			for(int x = 0; x < MAPX; x ++)
-				System.out.print(map[y][x] + " ");
-		}
-	}
-
-	public static void help(String input) {
-		// TODO Auto-generated method stud
-		Scanner helpButler = new Scanner(input);
-		helpButler.useDelimiter("");
-		
-		while(helpButler.hasNext("?") || helpButler.hasNext(" "))
-			helpButler.next();
-		
-		System.out.println(helpButler.next());
-		
-		helpButler.close();
 	}
 }
