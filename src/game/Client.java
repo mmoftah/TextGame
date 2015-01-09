@@ -5,50 +5,54 @@ import java.util.Scanner;
 public class Client {
 	private static Player player1;
 	private static Game game1;
-	private static boolean autosave;
+	private static boolean cont = true;
+	private static String input;
+	private static Scanner butler = new Scanner(System.in);
 	public static void main(String[] args) {
-		Scanner butler = new Scanner(System.in);
 		
-		System.out.print("Would you like to load a game? (y/n) ");
+		
+		System.out.print("Would you like to load a game? ");
+		while (!(butler.hasNext("[ynYN]"))) {
+			System.out.print("Please eneter a 'y' or an 'n': ");
+			butler.nextLine();
+		}
 		if(butler.nextLine().equalsIgnoreCase("Y")) {
-			game1 = new Game(player1);
+			player1 = new Player("", "");
+			game1 = new Game(player1, true);
 			game1.loadGame();
 		}
 		else  {
 			createCharacter();
-			game1 = new Game(player1);
+			game1 = new Game(player1, false);
+			if(game1.isAutosave())
+				game1.saveGame();
 		}
 		
-		game1.saveGame();
 		game1.showMap();
 		
 		do {
 			enterCommand();
-		} while(true);
+		} while(cont);
 	}
 	
 	private static void createCharacter() {
 		String characterName, characterClass;
-		Scanner butler = new Scanner(System.in);
 		
 		// Gets the name of the character
-		System.out.print("What is your name, aventurer? ");
+		System.out.print("What is your name, adventurer? ");
 		characterName = butler.nextLine();
 		while(characterName.length() <= 0) {
 			System.out.println("I don't recognize that name!");
-			System.out.print("What is your name, aventurer? ");
+			System.out.print("What is your name, adventurer? ");
 			characterName = butler.nextLine();
 		}
 		
 		//Get character class
-		System.out.print("Ah, " + characterName + "! Are you a (F)ighter, (L)eader, or (S)urivor? ");
+		System.out.print("Ah, " + characterName + "! Are you a Fighter, Leader, or Surivor? ");
 		characterClass = butler.nextLine().toLowerCase();
-		while (!(characterClass.equals("f") 
-				|| characterClass.equals("s")
-				|| characterClass.equals("l") 
-				|| characterClass.equals("fighter")
-				|| characterClass.equals("leader") 
-				|| characterClass.equals("survivor"))) {
+		while (!(characterClass.equals("f") || characterClass.equals("fighter") 
+				|| characterClass.equals("l") || characterClass.equals("leader") 
+				|| characterClass.equals("s") || characterClass.equals("survivor"))) {
 			System.out.print("What class was that? ");
 			characterClass = butler.nextLine();
 		}
@@ -59,14 +63,13 @@ public class Client {
 	private static void enterCommand() {
 		String input;
 		boolean moved = false;
-		Scanner butler = new Scanner(System.in);
 		System.out.print("What do you want to do, " + player1.getName()
 				+ "? Type 'help' for commands: ");
 		input = butler.nextLine();
 		switch (input.toLowerCase()) {	
 		case "help": case "help ": case " help ": 
 		case " help": case "'help'": case "h":
-			Game.showHelp();
+			game1.showHelp();
 			break;
 			
 		case "inventory": case " inventory": case "inventory ":
@@ -81,7 +84,8 @@ public class Client {
 			
 		case "save": case " save": case "save ":
 		case " save ": case "'save'":
-			game1.saveGame();
+			if(!game1.isAutosave())
+				game1.saveGame();
 			break;
 			
 		case "map": case " map": case "map ":
@@ -90,7 +94,7 @@ public class Client {
 			break;
 			
 		case "move up": case " move up": case "move up ":
-		case " move up ": case "'move up'": case "u":
+		case " move up ": case "'move up'": case "w":
 			if(game1.isValidY(player1.getY() - 1)) {
 				player1.moveUp();
 				moved = true;
@@ -99,7 +103,7 @@ public class Client {
 			break;
 			
 		case "move down": case " move down": case "move down ":
-		case " move down ": case "'move down'": case "d":
+		case " move down ": case "'move down'": case "s":
 			if(game1.isValidY(player1.getY() + 1)) {
 				player1.moveDown();
 				moved = true;
@@ -108,7 +112,7 @@ public class Client {
 			break;
 			
 		case "move right": case " move right": case "move right ":
-		case " move right ": case "'move right'": case "r":
+		case " move right ": case "'move right'": case "d":
 			if(game1.isValidX(player1.getX() + 1)) {
 				player1.moveRight();
 				moved = true;
@@ -117,7 +121,7 @@ public class Client {
 			break;
 			
 		case "move left": case " move left": case "move left ":
-		case " move left ": case "'move left'": case "l":
+		case " move left ": case "'move left'": case "a":
 			if(game1.isValidX(player1.getX() - 1)) {
 				player1.moveLeft();
 				moved = true;
@@ -125,16 +129,39 @@ public class Client {
 				System.err.println("That is not a valid move!");
 			break;
 			
-		case "autosave": case " autosave":
+			
+		case "autosave": case " autosave": case "autosave ":
+		case " autosave ": case "'autosave'":
+			game1.toggleAutosave();
 			break;
 			
+		case "exit": case " exit": case "exit ":
+		case " exit ": case "'exit'": case "e":
+			cont = false;
+			break;
+		
+		case "quit": case " quit": case "quit ":
+		case " quit ": case "'quit'": case "q":
+			cont = false;
+			break;
+			
+		case "info": case " info": case "info ":
+		case " info ": case "'info'":
+			break;
+		
+		case "show full map":
+			game1.showFullMap();
+			
 		default:
-			System.out.println("Unknown Command.");
+			if(input.startsWith("?"))
+				Game.help(input);
+			else
+				System.out.println("Unknown Command.");
 			enterCommand();
 			break;
 		}
-		
-		game1.saveGame();
+		if (game1.isAutosave())
+			game1.saveGame();
 		
 		if(moved)
 			game1.showMap();
